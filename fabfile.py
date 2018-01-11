@@ -22,6 +22,7 @@ env.wp_tarball = 'http://wordpress.org/latest.tar.gz'
 env.domain = 'test-aliyun.wordpress'
 env.dbname = 'test_aliyun_db'
 
+
 @task
 def provision_ecs():
 	instance_details = local("aliyuncli ecs CreateInstance --AccessKeyId %s --AccessKeySecret %s --KeyPairName %s --RegionId %s --InstanceType %s --ImageId %s" % \
@@ -32,7 +33,7 @@ def provision_ecs():
 
 @task 
 def apt_install():
-	sudo('apt install nginx php-cgi')
+	sudo('apt install -y nginx php-cgi mysql-client-5.7 php7.0-mysql php7.0-json php7.0-gd')
 
 @task
 def provision_rds():
@@ -122,8 +123,6 @@ def nginx():
         }}
         access_log /var/log/nginx/{0}.access.log;
         error_log /var/log/nginx/{0}.error.log;
-        include /etc/nginx/www_params;
-        include /etc/nginx/fastcgi_php;
     }}
     """
     new_config = default_config.format(domain, domain[4:])
@@ -140,7 +139,7 @@ def nginx():
 
     www(domain)
 
-    sudo('invoke-rc.d nginx reload')
+    sudo('systemctl reload nginx')
 
 @task
 def wordpress():
@@ -148,6 +147,7 @@ def wordpress():
     Installs WordPress, including NGINX config, DB, and wp-config.php
     """
     domain = env.domain
+    apt_install()
     credentials = create_credentials(domain)
     wp_config = StringIO()
     match = {
